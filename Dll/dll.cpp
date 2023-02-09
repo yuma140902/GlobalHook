@@ -18,7 +18,14 @@ HINSTANCE hInst;
 
 EXPORT_API_ int SetHook(HWND hWnd)
 {
-    MessageBox(NULL, _T("SetHook"), _T("SetHook"), MB_OK);
+    TCHAR procName[MAX_PATH];
+    TCHAR msg[MAX_PATH + 128];
+    HANDLE hProcess = GetCurrentProcess();
+    GetModuleFileNameEx(hProcess, NULL, procName, MAX_PATH);
+    DWORD pid = GetCurrentProcessId();
+    _stprintf_s(msg, _T("%s (PID:%d)"), procName, pid);
+
+    MessageBox(NULL, msg, _T("SetWindowsHookEx"), MB_OK);
     s_hKeyHook = SetWindowsHookEx(WH_KEYBOARD, KeyHookProc, hInst, 0);
     if (s_hKeyHook == NULL) {
         // failed
@@ -31,7 +38,14 @@ EXPORT_API_ int SetHook(HWND hWnd)
 
 EXPORT_API_ int ResetHook()
 {
-    MessageBox(NULL, _T("ResetHook"), _T("ResetHook"), MB_OK);
+    TCHAR procName[MAX_PATH];
+    TCHAR msg[MAX_PATH + 128];
+    HANDLE hProcess = GetCurrentProcess();
+    GetModuleFileNameEx(hProcess, NULL, procName, MAX_PATH);
+    DWORD pid = GetCurrentProcessId();
+    _stprintf_s(msg, _T("%s (PID:%d)"), procName, pid);
+
+    MessageBox(NULL, msg, _T("UnhookWindowsHookEx"), MB_OK);
     if (UnhookWindowsHookEx(s_hKeyHook) != 0) {
         // succeeded
     } else {
@@ -45,20 +59,25 @@ EXPORT_API_ int ResetHook()
 
 EXPORT_API_ LRESULT CALLBACK KeyHookProc(int nCode, WPARAM wp, LPARAM lp)
 {
-    TCHAR msg[64] = { 0 };
     if (nCode < 0) {
         return CallNextHookEx(s_hKeyHook, nCode, wp, lp);
     }
     if (nCode == HC_ACTION) {
+        TCHAR procName[MAX_PATH];
+        TCHAR msg[MAX_PATH + 128];
+        HANDLE hProcess = GetCurrentProcess();
+        GetModuleFileNameEx(hProcess, NULL, procName, MAX_PATH);
+        DWORD pid = GetCurrentProcessId();
+
         if (LP_BUTTON_PRESSED(lp)) {
             if (LP_BUTTON_IS_NORMAL(lp)) {
                 if (wp != VK_RETURN) {
-                    _stprintf_s(msg, _T("%c has pressed"), (int)wp);
-                    MessageBox(NULL, msg, NULL, MB_OK);
+                    _stprintf_s(msg, _T("%c has pressed \r\n\"%s\" (PID:%d)"), (int)wp, procName, pid);
+                    MessageBox(NULL, msg, _T("key pressed"), MB_OK);
                     PostMessage(s_hWnd, WM_KEYDOWN, wp, 0);
                 }
             } else {
-                MessageBox(NULL, _T("a system key has pressed"), NULL, MB_OK);
+                MessageBox(NULL, _T("a system key has pressed"), _T("key pressed"), MB_OK);
                 PostMessage(s_hWnd, WM_KEYDOWN, wp, 0);
             }
         }
@@ -71,13 +90,23 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 {
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH: {
-        TCHAR Buffer[MAX_PATH];
-        GetModuleFileNameEx(hModule, 0, Buffer, MAX_PATH);
-        MessageBox(NULL, _T("DllMain ATTACH"), _T("DllMain ATTACH"), MB_OK);
+        TCHAR procName[MAX_PATH];
+        TCHAR msg[MAX_PATH + 128];
+        HANDLE hProcess = GetCurrentProcess();
+        GetModuleFileNameEx(hProcess, NULL, procName, MAX_PATH);
+        DWORD pid = GetCurrentProcessId();
+        _stprintf_s(msg, _T("Attached to \"%s\" (PID:%d)"), procName, pid);
+        MessageBox(NULL, msg, _T("DllMain ATTACH"), MB_OK);
         hInst = hModule;
     } break;
     case DLL_PROCESS_DETACH: {
-        MessageBox(NULL, _T("DllMain DETACH"), _T("DllMain DETACH"), MB_OK);
+        TCHAR procName[MAX_PATH];
+        TCHAR msg[MAX_PATH + 128];
+        HANDLE hProcess = GetCurrentProcess();
+        GetModuleFileNameEx(hProcess, NULL, procName, MAX_PATH);
+        DWORD pid = GetCurrentProcessId();
+        _stprintf_s(msg, _T("Detached from \"%s\" (PID:%d)"), procName, pid);
+        MessageBox(NULL, msg, _T("DllMain DETACH"), MB_OK);
     } break;
     }
     return TRUE;
